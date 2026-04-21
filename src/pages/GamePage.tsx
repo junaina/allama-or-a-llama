@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
 import type { ParseResult } from "papaparse";
-
+import allamaSprite from "../assets/allama.png";
+import llamaSprite from "../assets/llama.png";
 type GuessType = "allama" | "llama";
 
 type CsvRow = {
@@ -202,14 +203,22 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
   const performanceLabel: string = getPerformanceLabel(score, wrongAnswers);
   if (isGameOver) {
     return (
-      <div className="page">
-        <div className="game-card">
-          <h1>Game Over</h1>
-          <p>Your score: {score}</p>
-          <p>Wrong answers: {wrongAnswers}</p>
-          <p>Result: {performanceLabel}</p>
+      <div className="page game-page">
+        <div className="game-card game-over-card">
+          <h1 className="game-over-title">Game Over</h1>
 
-          <div className="footer-actions">
+          <div className="game-over-stats">
+            <p>
+              Your score: <span>{score}</span>
+            </p>
+            <p>
+              Wrong answers: <span>{wrongAnswers}</span>
+            </p>
+          </div>
+
+          <p className="game-over-result">{performanceLabel}</p>
+
+          <div className="game-over-actions">
             <button
               className="replay-button"
               onClick={handleReplay}
@@ -236,6 +245,9 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
   }
 
   const isCorrect: boolean = selectedGuess === currentRow.type;
+
+  const resultSprite: string =
+    currentRow.type === "llama" ? llamaSprite : allamaSprite;
 
   return (
     <div className="page game-page">
@@ -273,10 +285,35 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
         </div>
 
         {showResult && (
-          <div className={`result ${isCorrect ? "correct" : "wrong"}`}>
-            {isCorrect
-              ? "Correct!"
-              : `Wrong. Correct answer: ${currentRow.type}`}
+          <div className="result-overlay">
+            <div className={`result-popup ${isCorrect ? "correct" : "wrong"}`}>
+              <img
+                src={resultSprite}
+                alt=""
+                className="result-sprite sprite-1"
+              />
+              <img
+                src={resultSprite}
+                alt=""
+                className="result-sprite sprite-2"
+              />
+              <img
+                src={resultSprite}
+                alt=""
+                className="result-sprite sprite-3"
+              />
+              <img
+                src={resultSprite}
+                alt=""
+                className="result-sprite sprite-4"
+              />
+
+              <p className="result-title">
+                {isCorrect ? "Correct!" : "Incorrect!"}
+              </p>
+
+              <p className="result-subtitle"></p>
+            </div>
           </div>
         )}
       </div>
