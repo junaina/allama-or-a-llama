@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Papa from "papaparse";
 import type { ParseResult } from "papaparse";
 import allamaSprite from "../assets/allama.png";
@@ -40,6 +40,64 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
   const [timeLeft, setTimeLeft] = useState<number>(GAME_TIME_SECONDS);
   const [gameStopped, setGameStopped] = useState<boolean>(false);
   const [wrongAnswers, setWrongAnswers] = useState<number>(0);
+  const correctAudioRef = useRef<HTMLAudioElement | null>(null);
+  const incorrectAudioRef = useRef<HTMLAudioElement | null>(null);
+  const gameOverAudioRef = useRef<HTMLAudioElement | null>(null);
+  const gameOverPlayedRef = useRef<boolean>(false);
+  const isGameOver: boolean =
+    gameStopped || timeLeft === 0 || currentIndex >= rows.length;
+
+  useEffect(() => {
+    const correctAudio = new Audio("/sounds/correct.mp3");
+    correctAudio.volume = 0.45;
+    correctAudio.preload = "auto";
+
+    const incorrectAudio = new Audio("/sounds/incorrect.mp3");
+    incorrectAudio.volume = 0.45;
+    incorrectAudio.preload = "auto";
+
+    const gameOverAudio = new Audio("/sounds/game-over.mp3");
+    gameOverAudio.volume = 0.5;
+    gameOverAudio.preload = "auto";
+
+    correctAudioRef.current = correctAudio;
+    incorrectAudioRef.current = incorrectAudio;
+    gameOverAudioRef.current = gameOverAudio;
+
+    return () => {
+      correctAudio.pause();
+      incorrectAudio.pause();
+      gameOverAudio.pause();
+
+      correctAudioRef.current = null;
+      incorrectAudioRef.current = null;
+      gameOverAudioRef.current = null;
+    };
+  }, []);
+  function playAudio(audio: HTMLAudioElement | null): void {
+    if (!audio) {
+      return;
+    }
+
+    audio.currentTime = 0;
+    void audio.play().catch(() => {
+      // ignore blocked playback
+    });
+  }
+
+  useEffect(() => {
+    if (!isGameOver) {
+      gameOverPlayedRef.current = false;
+      return;
+    }
+
+    if (gameOverPlayedRef.current) {
+      return;
+    }
+
+    gameOverPlayedRef.current = true;
+    playAudio(gameOverAudioRef.current);
+  }, [isGameOver]);
   useEffect(() => {
     async function loadCsv(): Promise<void> {
       try {
@@ -107,9 +165,6 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
       .filter((line: string) => line.length > 0);
   }, [currentRow]);
 
-  const isGameOver: boolean =
-    gameStopped || timeLeft === 0 || currentIndex >= rows.length;
-
   useEffect(() => {
     if (loading || errorMessage || rows.length === 0 || isGameOver) {
       return;
@@ -146,19 +201,31 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
     };
   }, [showResult, isGameOver]);
 
+  function playResultSound(isAnswerCorrect: boolean): void {
+    if (isAnswerCorrect) {
+      playAudio(correctAudioRef.current);
+      return;
+    }
+
+    playAudio(incorrectAudioRef.current);
+  }
   function handleGuess(guess: GuessType): void {
     if (!currentRow || showResult || isGameOver) {
       return;
     }
 
+    const isAnswerCorrect = guess === currentRow.type;
+
     setSelectedGuess(guess);
     setShowResult(true);
 
-    if (guess === currentRow.type) {
+    if (isAnswerCorrect) {
       setScore((prevScore: number) => prevScore + 1);
     } else {
       setWrongAnswers((prevWrongAnswers: number) => prevWrongAnswers + 1);
     }
+
+    playResultSound(isAnswerCorrect);
   }
 
   function handleStopPlaying(): void {
@@ -174,6 +241,7 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
     setTimeLeft(GAME_TIME_SECONDS);
     setGameStopped(false);
     setErrorMessage("");
+    gameOverPlayedRef.current = false;
   }
   if (loading) {
     return <div className="page">Loading game...</div>;

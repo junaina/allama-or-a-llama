@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import GamePage from "./pages/GamePage";
 import ArcadeBackdrop from "./components/ArcadeBackdrop";
 
@@ -6,6 +6,39 @@ type Screen = "home" | "game";
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("home");
+  const homeAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const homeAudio = new Audio("/sounds/home-screen.mp3");
+    homeAudio.loop = true;
+    homeAudio.volume = 0.25;
+    homeAudio.preload = "auto";
+
+    homeAudioRef.current = homeAudio;
+
+    return () => {
+      homeAudio.pause();
+      homeAudioRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const homeAudio = homeAudioRef.current;
+
+    if (!homeAudio) {
+      return;
+    }
+
+    if (screen === "home") {
+      void homeAudio.play().catch(() => {
+        // browser may block autoplay until user interacts
+      });
+      return;
+    }
+
+    homeAudio.pause();
+    homeAudio.currentTime = 0;
+  }, [screen]);
 
   if (screen === "home") {
     return (
