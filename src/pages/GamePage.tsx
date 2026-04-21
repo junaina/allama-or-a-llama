@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Papa from "papaparse";
 import type { ParseResult } from "papaparse";
 import allamaSprite from "../assets/allama.png";
@@ -40,6 +40,108 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
   const [timeLeft, setTimeLeft] = useState<number>(GAME_TIME_SECONDS);
   const [gameStopped, setGameStopped] = useState<boolean>(false);
   const [wrongAnswers, setWrongAnswers] = useState<number>(0);
+  const correctAudioRef = useRef<HTMLAudioElement | null>(null);
+  const incorrectAudioRef = useRef<HTMLAudioElement | null>(null);
+  const gameOverAudioRef = useRef<HTMLAudioElement | null>(null);
+  const gameOverPlayedRef = useRef<boolean>(false);
+  const gameOverHomeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const isGameOver: boolean =
+    gameStopped || timeLeft === 0 || currentIndex >= rows.length;
+
+  useEffect(() => {
+    const correctAudio = new Audio("/sounds/correct.mp3");
+    correctAudio.volume = 0.45;
+    correctAudio.preload = "auto";
+    correctAudio.load();
+
+    const incorrectAudio = new Audio("/sounds/incorrect.mp3");
+    incorrectAudio.volume = 0.45;
+    incorrectAudio.preload = "auto";
+    incorrectAudio.load();
+
+    const gameOverAudio = new Audio("/sounds/game-over.mp3");
+    gameOverAudio.volume = 0.5;
+    gameOverAudio.preload = "auto";
+    const gameOverHomeAudio = new Audio("/sounds/home-screen.mp3");
+    gameOverHomeAudio.volume = 0.25;
+    gameOverHomeAudio.loop = true;
+    gameOverHomeAudio.preload = "auto";
+    gameOverHomeAudio.load();
+
+    correctAudioRef.current = correctAudio;
+    incorrectAudioRef.current = incorrectAudio;
+    gameOverAudioRef.current = gameOverAudio;
+    gameOverHomeAudioRef.current = gameOverHomeAudio;
+
+    return () => {
+      gameOverAudio.onended = null;
+
+      correctAudio.pause();
+      incorrectAudio.pause();
+      gameOverAudio.pause();
+      gameOverHomeAudio.pause();
+
+      correctAudioRef.current = null;
+      incorrectAudioRef.current = null;
+      gameOverAudioRef.current = null;
+      gameOverHomeAudioRef.current = null;
+    };
+  }, []);
+  function stopAudio(audio: HTMLAudioElement | null): void {
+    if (!audio) {
+      return;
+    }
+
+    audio.pause();
+    audio.currentTime = 0;
+  }
+  function playAudio(audio: HTMLAudioElement | null): void {
+    if (!audio) {
+      return;
+    }
+
+    audio.currentTime = 0;
+    void audio.play().catch(() => {
+      // ignore blocked playback
+    });
+  }
+
+  useEffect(() => {
+    const gameOverAudio = gameOverAudioRef.current;
+    const gameOverHomeAudio = gameOverHomeAudioRef.current;
+
+    if (!isGameOver) {
+      gameOverPlayedRef.current = false;
+
+      if (gameOverAudio) {
+        gameOverAudio.onended = null;
+      }
+
+      stopAudio(gameOverAudio);
+      stopAudio(gameOverHomeAudio);
+      return;
+    }
+
+    if (!gameOverAudio || !gameOverHomeAudio || gameOverPlayedRef.current) {
+      return;
+    }
+
+    gameOverPlayedRef.current = true;
+
+    stopAudio(gameOverHomeAudio);
+
+    gameOverAudio.onended = () => {
+      gameOverAudio.onended = null;
+      gameOverHomeAudio.currentTime = 0;
+
+      void gameOverHomeAudio.play().catch((error: unknown) => {
+        console.error("Failed to play game-over home music", error);
+      });
+    };
+
+    playAudio(gameOverAudio);
+  }, [isGameOver]);
+
   useEffect(() => {
     async function loadCsv(): Promise<void> {
       try {
@@ -107,9 +209,6 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
       .filter((line: string) => line.length > 0);
   }, [currentRow]);
 
-  const isGameOver: boolean =
-    gameStopped || timeLeft === 0 || currentIndex >= rows.length;
-
   useEffect(() => {
     if (loading || errorMessage || rows.length === 0 || isGameOver) {
       return;
@@ -146,25 +245,44 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
     };
   }, [showResult, isGameOver]);
 
+  function playResultSound(isAnswerCorrect: boolean): void {
+    if (isAnswerCorrect) {
+      playAudio(correctAudioRef.current);
+      return;
+    }
+
+    playAudio(incorrectAudioRef.current);
+  }
   function handleGuess(guess: GuessType): void {
     if (!currentRow || showResult || isGameOver) {
       return;
     }
 
+    const isAnswerCorrect = guess === currentRow.type;
+
     setSelectedGuess(guess);
     setShowResult(true);
 
-    if (guess === currentRow.type) {
+    if (isAnswerCorrect) {
       setScore((prevScore: number) => prevScore + 1);
     } else {
       setWrongAnswers((prevWrongAnswers: number) => prevWrongAnswers + 1);
     }
+
+    playResultSound(isAnswerCorrect);
   }
 
   function handleStopPlaying(): void {
     setGameStopped(true);
   }
   function handleReplay(): void {
+    if (gameOverAudioRef.current) {
+      gameOverAudioRef.current.onended = null;
+    }
+
+    stopAudio(gameOverAudioRef.current);
+    stopAudio(gameOverHomeAudioRef.current);
+
     setRows((prevRows: CsvRow[]) => shuffleArray(prevRows));
     setCurrentIndex(0);
     setSelectedGuess(null);
@@ -174,6 +292,7 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
     setTimeLeft(GAME_TIME_SECONDS);
     setGameStopped(false);
     setErrorMessage("");
+    gameOverPlayedRef.current = false;
   }
   if (loading) {
     return <div className="page">Loading game...</div>;
