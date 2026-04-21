@@ -280,25 +280,20 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
               : `Wrong. Correct answer: ${currentRow.type}`}
           </div>
         )}
+      </div>
+      <div className="footer-row">
+        <div className="footer-actions">
+          <button className="home-button" onClick={onBackToHome} type="button">
+            Back to Home
+          </button>
 
-        <div className="footer-row">
-          <div className="footer-actions">
-            <button
-              className="home-button"
-              onClick={onBackToHome}
-              type="button"
-            >
-              Back to Home
-            </button>
-
-            <button
-              className="stop-button"
-              onClick={handleStopPlaying}
-              type="button"
-            >
-              Stop Playing
-            </button>
-          </div>
+          <button
+            className="stop-button"
+            onClick={handleStopPlaying}
+            type="button"
+          >
+            Stop Playing
+          </button>
         </div>
       </div>
     </div>
