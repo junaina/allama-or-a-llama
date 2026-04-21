@@ -238,13 +238,12 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
   const isCorrect: boolean = selectedGuess === currentRow.type;
 
   return (
-    <div className="page">
+    <div className="page game-page">
+      <div className="top-bar">
+        <p className="timer">Time left: {timeLeft}s</p>
+        <p className="score">Score: {score}</p>
+      </div>
       <div className="game-card">
-        <div className="top-bar">
-          <p className="timer">Time left: {timeLeft}s</p>
-          <p className="score">Score: {score}</p>
-        </div>
-
         <div className="couplet">
           {verses.map((line: string, index: number) => (
             <p key={`${currentRow.id}-${index}`} className="verse">
@@ -260,7 +259,7 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
             disabled={showResult}
             type="button"
           >
-            allama
+            Allama
           </button>
 
           <button
@@ -269,7 +268,7 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
             disabled={showResult}
             type="button"
           >
-            a llama
+            Llama
           </button>
         </div>
 
@@ -280,25 +279,20 @@ export default function GamePage({ onBackToHome }: GamePageProps) {
               : `Wrong. Correct answer: ${currentRow.type}`}
           </div>
         )}
+      </div>
+      <div className="footer-row">
+        <div className="footer-actions">
+          <button className="home-button" onClick={onBackToHome} type="button">
+            Back to Home
+          </button>
 
-        <div className="footer-row">
-          <div className="footer-actions">
-            <button
-              className="home-button"
-              onClick={onBackToHome}
-              type="button"
-            >
-              Back to Home
-            </button>
-
-            <button
-              className="stop-button"
-              onClick={handleStopPlaying}
-              type="button"
-            >
-              Stop Playing
-            </button>
-          </div>
+          <button
+            className="stop-button"
+            onClick={handleStopPlaying}
+            type="button"
+          >
+            Stop Playing
+          </button>
         </div>
       </div>
     </div>
